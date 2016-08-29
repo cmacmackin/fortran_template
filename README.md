@@ -19,8 +19,8 @@ under a different license, so long as it has been deemed free by the
 If you do this, please indicate that the Makefile and/or `get_deps`
 program are covered by the GPL.
 
-This README, the contents of `doc.md`, and the program stub in
-`src/program.f90` are available under the terms of the
+This README, the `.gitignore` file, the contents of `doc.md`, and the
+program stub in `src/program.f90` are available under the terms of the
 [CC0 license](https://creativecommons.org/choose/zero/).
 
 

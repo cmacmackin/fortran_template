@@ -99,7 +99,7 @@ $(MDIR):
 
 clean:
 	@echo Deleting all object, module, and dependency files
-	@/bin/rm -rf $(OBJS) ./tmp $(MDIR) $(OBJS:.o=.d)
+	@/bin/rm -rf $(OBJS) ./tmp $(MDIR) $(OBJS:.o=.d) *~ $(SRC)/*~
 
 doc: documentation.md
 	ford $<
