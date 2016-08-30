@@ -17,24 +17,9 @@
 #  MA 02110-1301, USA.
 #  
 
-# The compiler
-FC := gfortran
-
-# Flags for debugging or for maximum performance
-FCFLAGS = -Ofast -Wall #-fpic
-
-# Include paths
-FCFLAGS += -J$(MDIR) -I$(INCDIR) -I/usr/include
-
-# Link-time flags
-LDFLAGS := -Ofast
-
 # Directories
 SDIR := ./src
 MDIR := ./mod
-
-# Extensions of Fortran files, case insensitive
-F_EXT := f for fpp f90 f95 f03 f08 f15
 
 # Output
 EXEC := a.out
@@ -43,6 +28,28 @@ PREFIX := $(HOME)/.local
 LIBDIR := $(PREFIX)/lib
 INCDIR := $(PREFIX)/include
 BINDIR := $(PREFIX)/bin
+
+# The compiler
+FC := gfortran
+
+# Flags for debugging or for maximum performance
+FCFLAGS := -Ofast -Wall #-fpic
+
+# Include paths internal to project
+PROJECT_INCDIRS :=
+
+# A regular expression for names of modules provided by external libraries
+# and which won't be contained in the module directory of this codebase
+EXTERNAL_MODS := ^iso_(fortran_env|c_binding)|ieee_(exceptions|arithmetic|features)|openacc|omp_lib(_kinds)?|mpi$$
+
+# Include paths
+FCFLAGS += -J$(MDIR) $(PROJECT_INCDIR:%=-I%) -I$(INCDIR) -I/usr/include
+
+# Link-time flags
+LDFLAGS := -Ofast -L$(LIBDIR)
+
+# Extensions of Fortran files, case insensitive
+F_EXT := f for fpp f90 f95 f03 f08 f15
 
 # Temporary work variables
 _F_EXT := $(F_EXT) $(shell echo $(F_EXT) | tr a-z A-Z)
@@ -62,7 +69,7 @@ all_objects: $(OBJS)
 exec: $(EXEC)
 
 $(EXEC): $(OBJS)
-	$(FC) $(LDFLAGS) $^ -o $@
+	$(FC) $^ $(LDFLAGS) -o $@
 
 install_exec: exec
 	cp $(EXEC) $(BINDIR)
@@ -70,7 +77,7 @@ install_exec: exec
 lib: $(LIB)
 
 $(LIB): $(OBJS)
-	$(FC) $(LDFLAGS) -shared $^ -o $@
+	$(FC) $^ $(LDFLAGS) -shared -o $@
 
 install_lib: lib
 	cp $(LIB) $(LIBDIR)
@@ -87,8 +94,8 @@ define fortran_rule
 %.o: %.$(1) | $(MDIR)
 	$$(FC) $$(FCFLAGS) -c $$< -o $$@
 
-%.d: %.$(1)
-	./get_deps $$(MDIR) $$< > $$@
+%.d: %.$(1) get_deps
+	./get_deps $$< \$$$$\(MDIR\) "$$(EXTERNAL_MODS)" $$(PROJECT_INCDIRS) > $$@
 endef
 
 # Register compilation rules for each Fortran extension
@@ -97,9 +104,29 @@ $(foreach EXT,$(_F_EXT),$(eval $(call fortran_rule,$(EXT))))
 $(MDIR):
 	@mkdir -p $@
 
-clean:
-	@echo Deleting all object, module, and dependency files
-	@/bin/rm -rf $(OBJS) ./tmp $(MDIR) $(OBJS:.o=.d) *~ $(SRC)/*~
+.PHONEY: clean clean_obj clean_mod clean_backups doc
+
+clean: clean_obj clean_mod clean_deps clean_backups
+
+clean_obj:
+	@echo Deleting all object files
+	@/bin/rm -rf $(OBJS)
+
+clean_mod:
+	@echo Deleting all module files
+	@/bin/rm -rf $(MDIR)
+
+clean_deps:
+	@echo Deleting all dependency files
+	@/bin/rm -rf $(OBJS:.o=.d)
+
+clean_exec:
+	@echo Deleting executable file
+	@/bin/rm -rf $(EXEC)
+
+clean_backups:
+	@echo Deleting emacs backup files
+	@/bin/rm -rf $(shell find '.' -name '*~') $(shell find '.' -name '\#*\#')
 
 doc: documentation.md
 	ford $<
